@@ -1,6 +1,8 @@
 <?php
 
-require_once(__DIR__."/../vendor/autoload.php");
+require_once(__DIR__."/../src/Task.php");
+require_once(__DIR__."/../src/IO.php");
+require_once(__DIR__."/../src/Runtime/Console.php");
 
 use Lechimp\Tsks\Task;
 use Lechimp\Tsks\IO;
@@ -18,14 +20,3 @@ class MyTask extends Task {
 
 $console = new Console();
 $console->run(new MyTask());
-
-/*class MyTask extends Task {
-    public function build(IO $io) {
-        return $io
-            ->putLine("Hello! What is your name?")
-            ->getLine()->bind(function($name) use ($io) {
-                $greeting = "Hello World";
-                return $io->putLine($greeting); 
-            });
-    }
-}*/

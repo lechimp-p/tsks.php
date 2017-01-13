@@ -1,6 +1,9 @@
 <?php
 
-require_once(__DIR__."/../vendor/autoload.php");
+require_once(__DIR__."/../src/Task.php");
+require_once(__DIR__."/../src/IO.php");
+require_once(__DIR__."/../src/Runtime/Console.php");
+require_once(__DIR__."/../src/Runtime/Stepwise.php");
 
 use Lechimp\Tsks\Task;
 use Lechimp\Tsks\IO;
@@ -18,5 +21,5 @@ class MyTask extends Task {
 }
 
 $console = new Console();
-$step_wise = new Stepwise($console, "persistent.state");
+$step_wise = new Stepwise($console, "stepwise.state");
 $step_wise->run(new MyTask());
