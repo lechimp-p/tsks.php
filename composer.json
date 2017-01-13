@@ -17,6 +17,6 @@
         "source": "https://github.com/lechimp-p/tsks.php"
     },
     "autoload" : {
-        "psr-4" : { "Lechimp\\tsks.php\\" : "src" }
+        "psr-4" : { "Lechimp\\Tsks\\" : "src" }
     }
 }
