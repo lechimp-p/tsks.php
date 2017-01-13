@@ -1,0 +1,22 @@
+{
+    "name": "lechimp-p/tsks.php",
+    "version": "0.7.0",
+    "description": "DESCRIPTION",
+    "keywords": ["form", "formlet"],
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/lechimp-p/tsks.php",
+    "authors": [
+        {
+            "name": "Richard Klees",
+            "email": "richard.klees@rwth-aachen.de"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/lechimp-p/tsks.php/internal/issues",
+        "source": "https://github.com/lechimp-p/tsks.php"
+    },
+    "autoload" : {
+        "psr-4" : { "Lechimp\\tsks.php\\" : "src" }
+    }
+}
