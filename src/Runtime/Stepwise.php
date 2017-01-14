@@ -67,7 +67,7 @@ class Stepwise implements IO {
             }
         }
         unlink($this->file);
-        echo "Task done. Remove {$this->file}.\n";
+        echo "!! Task done. Removing {$this->file}.\n";
     }
 
     public function putLine($line) {
