@@ -6,26 +6,37 @@ use Lechimp\Tsks\IO;
 use Lechimp\Tsks\Task;
 
 class Console implements IO {
+    use IO\Runtime;
+
     public $last_result = null;
 
-    public function run(Task $task) {
-        foreach($task->run($this) as $action) {
-            switch ($action[0]) {
-                case "putLine":
-                    echo $action[1]."\n"; 
-                    break;
-                case "getLine":
-                    $this->last_result = readline("> "); 
-                    break;
-                default:
-                    throw new \LogicException("Unknown action: {$action[0]}");
-            }
+    public function run($cmd_or_task) {
+        if ($cmd_or_task instanceof IO\Command) {
+            return $this->run_command($cmd_or_task);
+        }
+        if ($cmd_or_task instanceof Task) {
+            return $this->run_task($cmd_or_task);
+        }
+        throw new \InvalidArgumentException(
+                    "Can't handle: '".get_class($cmd_or_task)."'");
+    }
+
+    protected function run_command(IO\Command $cmd) {
+        switch ($cmd->name()) {
+            case "PutLine":
+                echo $cmd->line()."\n";
+                break;
+            case "GetLine":
+                $this->last_result = readline("> ");
+                break;
+            default:
+                throw new \LogicException("Unknown command: {$cmd->name()}");
         }
     }
-    public function putLine($line) {
-        return ["putLine", $line]; 
-    }
-    public function getLine() {
-        return ["getLine"];
+
+    protected function run_task(Task $task) {
+        foreach($task->run($this) as $cmd_or_task) {
+            $this->run($cmd_or_task);
+        }
     }
 }

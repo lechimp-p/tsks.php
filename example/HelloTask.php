@@ -1,17 +1,14 @@
 <?php
 
-require_once(__DIR__."/../src/Task.php");
-require_once(__DIR__."/../src/IO.php");
-
 use Lechimp\Tsks\Task;
 use Lechimp\Tsks\IO;
 
 class HelloTask extends Task {
     public function run(IO $io) {
-        yield $io->putLine("Hello! What is your name?");
-        yield $io->getLine();
+        yield $io->put_line("Hello! What is your name?");
+        yield $io->get_line();
         $name = $io->last_result;
         $greeting = "Hello $name!";
-        yield $io->putLine($greeting);
+        yield $io->put_line($greeting);
     }
 }

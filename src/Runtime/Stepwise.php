@@ -6,6 +6,8 @@ use Lechimp\Tsks\IO;
 use Lechimp\Tsks\Task;
 
 class Stepwise implements IO {
+    use IO\Runtime;
+
     protected $io;
     protected $file;
     public $last_result = null;
@@ -15,7 +17,34 @@ class Stepwise implements IO {
         $this->io = $io;
     }
 
-    public function run(Task $task) {
+    public function run($cmd_or_task) {
+        if ($cmd_or_task instanceof IO\Command) {
+            return $this->run_command($cmd_or_task);
+        }
+        if ($cmd_or_task instanceof Task) {
+            return $this->run_task($cmd_or_task);
+        }
+        throw new \InvalidArgumentException(
+                    "Can't handle: '".get_class($cmd_or_task)."'");
+    }
+
+    protected function run_command(IO\Command $cmd) {
+        switch ($cmd->name()) {
+            case "PutLine":
+                $this->io->run($cmd);
+                file_put_contents($this->file, "\$tsks_results[] = null;\n", FILE_APPEND);
+                break;
+            case "GetLine":
+                $this->io->run($cmd);
+                $val = serialize($this->io->last_result);
+                file_put_contents($this->file, "\$tsks_results[] = unserialize('$val');\n", FILE_APPEND);
+                break;
+            default:
+                throw new \LogicException("Unknown action: {$cmd->name()}");
+        }
+    }
+
+    protected function run_task(Task $task) {
         $step = 0;
         $skip = 0;
         $results = [];
@@ -33,50 +62,23 @@ class Stepwise implements IO {
                 "\$tsks_skip = 0;\n".
                 "\$tsks_results = [];\n");
         }
-        foreach($task->run($this) as $action) {
+        foreach($task->run($this) as $cmd) {
             $step++;
             if ($step <= $skip) {
-                switch ($action[0]) {
-                    case "putLine":
-                        break;
-                    case "getLine":
-                        $this->last_result = $results[$step-1];
-                        break;
-                    default:
-                        throw new \LogicException("Unknown action: {$action[0]}");
+                if ($cmd->name() == "GetLine") {
+                   $this->last_result = $results[$step-1];
                 }
+                continue;
             }
-            else {
-                file_put_contents($this->file, "// STEP $step\n", FILE_APPEND);
-                file_put_contents($this->file, "\$tsks_skip = $step;\n", FILE_APPEND);
-                switch ($action[0]) {
-                    case "putLine":
-                        $this->io->run(new PutLineTask($action[1]));
-                        $val = serialize($action[1]);
-                        file_put_contents($this->file, "\$tsks_results[] = null;\n", FILE_APPEND);
-                        break;
-                    case "getLine":
-                        $this->io->run(new GetLineTask($action[1]));
-                        $val = serialize($this->io->last_result);
-                        file_put_contents($this->file, "\$tsks_results[] = unserialize('$val');\n", FILE_APPEND);
-                        break;
-                    default:
-                        throw new \LogicException("Unknown action: {$action[0]}");
-                }
-                return;
-            }
+
+            file_put_contents($this->file, "// STEP $step\n", FILE_APPEND);
+            file_put_contents($this->file, "\$tsks_skip = $step;\n", FILE_APPEND);
+            $this->run_command($cmd);
+            return;
         }
         unlink($this->file);
         echo "!! Task done. Removing {$this->file}.\n";
     }
-
-    public function putLine($line) {
-        return ["putLine", $line]; 
-    }
-    public function getLine() {
-        return ["getLine"];
-    }
-
 }
 
 class PutLineTask extends Task {

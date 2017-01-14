@@ -1,8 +1,7 @@
 <?php
 
+require_once(__DIR__."/../vendor/autoload.php");
 require_once(__DIR__."/HelloTask.php");
-require_once(__DIR__."/../src/Runtime/Console.php");
-require_once(__DIR__."/../src/Runtime/Stepwise.php");
 
 use Lechimp\Tsks\Runtime\Console;
 use Lechimp\Tsks\Runtime\Stepwise;
