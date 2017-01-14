@@ -29,24 +29,73 @@ class Stepwise implements IO {
     }
 
     protected function run_task(Task $task) {
-        $step = 0;
-        list($skip, $results) = $this->get_state();
+        list($skip, $results, $on_level) = $this->get_state();
+        $this->run_task_level($task, 0, $skip, $results, $on_level);
+    }
 
+    protected function run_task_level(Task $task, $level, $skip, $results, $on_level) {
+        $step = 0;
         $gen = $task->run($this);
         while($gen->valid()) {
             $step++;
-            if ($step <= $skip) {
-                $gen->send($results[$step-1]);
+
+            // Skip the steps at the current level that were
+            // already completed.
+            if ($step <= $skip[$level]) {
+                $gen->send($results[$level][$step-1]);
                 continue;
             }
 
-            $cmd = $gen->current();
-            $res = $this->io->run($cmd);
-            $this->update_state($step, $res);
+            // This is the thing we are currently working on.
+            $cmd_or_task = $gen->current();
+
+            // Go down one level if we didn't reach the level
+            // we are currently working on.
+            if ($level < $on_level) {
+                assert('$cmd instanceof Lechimp\Tsks\Task');
+                return $this->run_task_level
+                                ( $cmd_or_task
+                                , $level + 1
+                                , $skip
+                                , $results
+                                , $on_level
+                                );
+            }
+
+            // Easy case: we are working on a plain command.
+            // Just perform it.
+            if ($cmd_or_task instanceof IO\Command) {
+                $res = $this->io->run($cmd_or_task);
+                $this->update_state($level, $step, $res);
+                return $res;
+            }
+
+            // More involved case: we are workin on a subtask.
+            // We need to dive down into it.
+            $skip[] = 0;
+            $on_level++;
+            echo "!! Working on subtask.\n";
+            $this->descend_state($on_level);
+            return $this->run_task_level
+                            ( $cmd_or_task
+                            , $level + 1
+                            , $skip
+                            , $results
+                            , $on_level
+                            );
+        }
+
+        if ($level == 0) {
+            unlink($this->file);
+            echo "!! Task done. Removing {$this->file}.\n";
             return;
         }
-        unlink($this->file);
-        echo "!! Task done. Removing {$this->file}.\n";
+
+        $res = $gen->getReturn();
+        $on_level--;
+        $this->ascend_state($on_level, $skip[$on_level] + 1, $res);
+        echo "!! Subtask done.\n";
+        return $res;
     }
 
     protected function get_state() {
@@ -54,7 +103,7 @@ class Stepwise implements IO {
             return $this->read_state();
         }
         $this->init_state();
-        return [0, []];
+        return [[0], [], 0];
     }
 
     protected function state_exists() {
@@ -63,26 +112,51 @@ class Stepwise implements IO {
 
     protected function read_state() {
         require_once($this->file);
-        global $tsks_skip, $tsks_results;
-        return [$tsks_skip, $tsks_results];
+        global $tsks_skip, $tsks_results, $tsks_level;
+        return [$tsks_skip, $tsks_results, $tsks_level];
     }
 
     protected function init_state() {
         file_put_contents($this->file,
             "<?php\n".
             "// INIT\n".
-            "global \$tsks_skip, \$tsks_results;\n".
-            "\$tsks_skip = 0;\n".
-            "\$tsks_results = [];\n");
+            "global \$tsks_skip, \$tsks_results, \$tsks_level;\n".
+            "\$tsks_level = 0;\n".
+            "\$tsks_skip = [0];\n".
+            "\$tsks_results = [[]];\n");
     }
 
-    protected function update_state($step, $res) {
-        file_put_contents($this->file, "// STEP $step\n", FILE_APPEND);
-        file_put_contents($this->file, "\$tsks_skip = $step;\n", FILE_APPEND);
+    protected function update_state($level, $step, $res) {
         $res = serialize($res);
         file_put_contents
             ( $this->file
-            , "\$tsks_results[] = unserialize('$res');\n"
+            , "// STEP $level, $step\n"
+            . "\$tsks_skip[$level] = $step;\n"
+            . "\$tsks_results[$level][] = unserialize('$res');\n"
+            , FILE_APPEND
+            );
+    }
+
+    protected function ascend_state($level, $step, $res) {
+        $res = serialize($res);
+        file_put_contents
+            ( $this->file
+            , "// ASCEND $level, $step\n"
+            . "\$tsks_level = $level;\n"
+            . "array_pop(\$tsks_skip);\n"
+            . "\$tsks_skip[$level] = $step;\n"
+            . "\$tsks_results[$level][] = unserialize('$res');\n"
+            , FILE_APPEND
+            );
+    }
+
+    protected function descend_state($level) {
+        file_put_contents
+            ( $this->file
+            , "// DESCEND $level\n"
+            . "\$tsks_level = $level;\n"
+            . "\$tsks_skip[] = 0;\n"
+            . "\$tsks_results[] = [];\n"
             , FILE_APPEND
             );
     }
