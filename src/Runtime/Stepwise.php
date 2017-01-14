@@ -50,7 +50,7 @@ class Stepwise implements IO {
             $cmd_or_task = $gen->current();
 
             // Go down one level if we didn't reach the level
-            // we are currently working on.
+            // we are currently working in.
             if ($level < $on_level) {
                 assert('$cmd instanceof Lechimp\Tsks\Task');
                 return $this->run_task_level
