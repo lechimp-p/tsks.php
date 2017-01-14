@@ -25,18 +25,21 @@ class Console implements IO {
         switch ($cmd->name()) {
             case "PutLine":
                 echo $cmd->line()."\n";
-                break;
+                return;
             case "GetLine":
-                $this->last_result = readline("> ");
-                break;
+                return readline("> ");
             default:
                 throw new \LogicException("Unknown command: {$cmd->name()}");
         }
     }
 
     protected function run_task(Task $task) {
-        foreach($task->run($this) as $cmd_or_task) {
-            $this->run($cmd_or_task);
+        $gen = $task->run($this);
+        while($gen->valid()) {
+            $cmd_or_task = $gen->current();
+            $res = $this->run($cmd_or_task);
+            $gen->send($res);
         }
+        return $gen->getReturn();
     }
 }
